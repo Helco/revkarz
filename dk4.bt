@@ -1,0 +1,133 @@
+//------------------------------------------------
+//--- 010 Editor v9.0.2 Binary Template
+//
+//      File: dk4.bt
+//   Authors: Helco
+//   Version: 1
+//   Purpose: DethKarz DK4 files
+//  Category: Game Models
+//  ID Bytes: 52 44 45 48
+//------------------------------------------------
+
+char[4] PeekMagic()
+{
+  local char magic[4];
+  ReadBytes(magic, FTell(), 4);
+  return magic;
+}
+
+void RequireMagic(string header)
+{
+  char magic[4];
+  if (magic != header)
+  {
+    Printf("Wanted magic %s but got %s\n", header, magic);
+    Exit(1);
+  }
+}
+void RequireVersions(string version1, string version2)
+{
+  char version[4];
+  if (version != version1 && version != version2)
+  {
+    Printf("Wanted version %s or %s but got %s\n", version1, version2, magic);
+    Exit(1);
+  }
+}
+
+
+struct DK4Header
+{
+  RequireMagic("RDEH");
+  RequireVersions("5000", "4000");
+  char dkVersion[4];
+  uint unk1;
+  char name[64];
+} dk4Header;
+
+struct VHDR_Sub
+{
+  float f[8];
+};
+
+struct VHDR(uint count)
+{
+  RequireMagic("RDHV");
+  RequireVersions("1000", "NOPE");
+  if (count > 0)
+    VHDR_Sub subs[count];
+};
+
+struct VCHR_Sub
+{
+  uint unk[4];
+};
+
+struct VCHR(uint count)
+{
+  RequireMagic("RHCV");
+  char version[4];
+  if (count > 0)
+    VCHR_Sub subs[count];
+};
+
+struct THDR_Sub
+{
+  short u1, u2, u3, gap;
+  float f1, f2, f3;
+};
+
+struct THDR(uint count)
+{
+  RequireMagic("RDHT");
+  RequireVersions("1000", "NOPE");
+  if (count > 0)
+    THDR_Sub subs[count];
+};
+
+struct MHDR_Sub
+{
+  uint start, end;
+  float f1, f2, f3;
+  uint u1, u2, u3;
+  float f4, f5, f6, f7;
+  char textureName[16];
+  int u4, u5, u6;
+  float f8;
+  uint u7, u8, u9, u10, u11;
+};
+
+struct MHDR(uint count)
+{
+  RequireMagic("RDHM");
+  RequireVersions("1000", "NOPE");
+  if (count > 0)
+    MHDR_Sub subs[count];
+};
+
+struct COMP
+{
+  RequireMagic("PMOC");
+  RequireVersions("2000", "NOPE");
+  char name[40];
+  uint thdrCount, unk2, count3, vhdrCount, count5, mhdrCount, vchrCount;
+  char gap[32];
+
+  VHDR vhdr(vhdrCount);
+  if (PeekMagic() == "RHCV") VCHR vchr(vchrCount);
+  THDR thdr(thdrCount);
+  MHDR mhdr(mhdrCount);
+};
+
+local char next[4];
+while(FTell() < FileSize())
+{
+  next = PeekMagic();
+  if (next == "PMOC")
+    COMP section;
+  else
+  {
+    Printf("Unknown section %s\n", next);
+    Exit(2);
+  }
+}
